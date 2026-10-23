@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7ff">
+  <title>ValueFlip | Currency &amp; Purchase Assistant</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <a class="brand" href="#home" aria-label="ValueFlip home">
+        <span class="brand-mark">↗</span>
+        <span>value<span class="brand-accent">flip</span></span>
+      </a>
+      <nav aria-label="Main navigation">
+        <a href="#converter">Currency converter</a>
+        <a href="#estimator">Cost estimator</a>
+      </nav>
+      <span class="rate-pill"><i></i>{{ "Live rates" if live_rates else "Fallback rates" }}</span>
+    </header>
+
+    <main>
+      <section class="hero" id="home">
+        <div class="hero-copy">
+          <span class="eyebrow"><span class="sparkle">✦</span> MONEY, MADE SIMPLE</span>
+          <h1>Go further<br>with <span>every currency.</span></h1>
+          <p>Convert with confidence and know the real cost of your next international purchase.</p>
+          <div class="hero-actions">
+            <a class="button button-light" href="#converter">Convert currency <span>↗</span></a>
+            <a class="text-link" href="#estimator">Estimate a purchase <span>↓</span></a>
+          </div>
+          <div class="hero-note"><span class="shield">✓</span> Clear calculations. No surprises.</div>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+          <div class="coin coin-main"><span>€</span><small>EURO</small></div>
+          <div class="coin coin-small coin-dollar">$</div>
+          <div class="coin coin-yen">¥</div>
+          <div class="float-card"><span>YOUR MONEY</span><strong>Worldwide <b>✦</b></strong></div>
+          <div class="float-label">↗ &nbsp; Explore more</div>
+        </div>
+        <div class="hero-stats">
+          <div><strong>11</strong><span>currencies</span></div>
+          <div><strong>2</strong><span>smart tools</span></div>
+          <div><strong>100%</strong><span>clear breakdowns</span></div>
+        </div>
+      </section>
+
+      {% if error %}
+      <div class="alert" role="alert"><span>!</span>{{ error }}</div>
+      {% endif %}
+
+      <section class="tools-heading">
+        <div><span class="eyebrow">YOUR MONEY TOOLKIT</span><h2>Plan smarter, spend better.</h2></div>
+        <p>Everything you need to make your next money move.</p>
+      </section>
+
+      <section class="tool-grid">
+        <article class="tool-card converter-card" id="converter">
+          <div class="card-top">
+            <div class="tool-icon purple-icon">⇄</div>
+            <span class="card-kicker">01 / CONVERT</span>
+          </div>
+          <h3>Currency converter</h3>
+          <p class="card-description">A quick exchange, wherever life takes you.</p>
+          <form class="converter-form" method="post" action="#converter">
+            <input type="hidden" name="action" value="convert">
+            <input id="conversion-entry-id" type="hidden" name="entry_id" value="">
+            <label for="amount">Amount</label>
+            <div class="amount-field"><span>✦</span><input id="amount" name="amount" type="number" min="0" step="any" value="{{ values.amount }}" required></div>
+            <div class="currency-row">
+              <div class="field-group">
+                <label for="from_currency">From</label>
+                <select id="from_currency" name="from_currency">
+                  {% for currency in currencies %}<option value="{{ currency }}" {% if values.from_currency == currency %}selected{% endif %}>{{ currency }}</option>{% endfor %}
+                </select>
+              </div>
+              <button class="swap-button" type="button" aria-label="Swap currencies" title="Swap currencies">⇄</button>
+              <div class="field-group">
+                <label for="to_currency">To</label>
+                <select id="to_currency" name="to_currency">
+                  {% for currency in currencies %}<option value="{{ currency }}" {% if values.to_currency == currency %}selected{% endif %}>{{ currency }}</option>{% endfor %}
+                </select>
+              </div>
+            </div>
+            <button class="button button-primary" type="submit">Convert now <span>→</span></button>
+          </form>
+          {% if conversion %}
+          <div
+            class="result conversion-result"
+            aria-live="polite"
+            data-entry-id="{{ conversion.entry_id }}"
+            data-amount="{{ conversion.amount }}"
+            data-from-currency="{{ conversion.from_currency }}"
+            data-to-currency="{{ conversion.to_currency }}"
+            data-result="{{ conversion.result }}"
+          >
+            <span>YOUR CONVERSION</span>
+            <strong>{{ "{:,.2f}".format(conversion.amount) }} {{ conversion.from_currency }} <b>=</b><br>{{ "{:,.2f}".format(conversion.result) }} {{ conversion.to_currency }}</strong>
+          </div>
+          {% else %}
+          <div class="result-hint"><span>✦</span> Your converted amount will appear here.</div>
+          {% endif %}
+          <section class="history-panel" aria-labelledby="history-title">
+            <div class="history-heading">
+              <div>
+                <span class="card-kicker">YOUR RECENT ACTIVITY</span>
+                <h4 id="history-title">Conversion history</h4>
+              </div>
+              <button class="clear-history" id="clear-history" type="button">Clear</button>
+            </div>
+            <p class="history-empty" id="history-empty">Your conversions will show up here.</p>
+            <ol class="history-list" id="history-list" aria-live="polite"></ol>
+            <p class="history-message" id="history-message" role="status"></p>
+          </section>
+        </article>
+
+        <article class="tool-card estimator-card" id="estimator">
+          <div class="card-top">
+            <div class="tool-icon coral-icon">⌁</div>
+            <span class="card-kicker">02 / ESTIMATE</span>
+          </div>
+          <h3>Purchase estimator</h3>
+          <p class="card-description">See the whole picture before you check out.</p>
+          <form method="post" action="#estimator">
+            <input type="hidden" name="action" value="estimate">
+            <div class="estimate-fields">
+              <div class="field-group"><label for="product_price">Product price</label><input id="product_price" name="product_price" type="number" min="0" step="any" value="{{ values.product_price }}" required></div>
+              <div class="field-group"><label for="shipping_cost">Shipping cost</label><input id="shipping_cost" name="shipping_cost" type="number" min="0" step="any" value="{{ values.shipping_cost }}" required></div>
+              <div class="field-group"><label for="tax_rate">Tax rate (%)</label><input id="tax_rate" name="tax_rate" type="number" min="0" max="100" step="any" value="{{ values.tax_rate }}" required></div>
+              <div class="field-group"><label for="payment_fee">Payment fee (%)</label><input id="payment_fee" name="payment_fee" type="number" min="0" max="100" step="any" value="{{ values.payment_fee }}" required></div>
+              <div class="field-group budget-field"><label for="budget">Your budget</label><input id="budget" name="budget" type="number" min="0" step="any" value="{{ values.budget }}" required></div>
+            </div>
+            <button class="button button-primary coral-button" type="submit">Calculate total cost <span>→</span></button>
+          </form>
+          {% if estimate %}
+          <div class="result estimate-result" aria-live="polite">
+            <div class="breakdown"><span>Product price</span><b>{{ "%.2f"|format(estimate.price) }}</b></div>
+            <div class="breakdown"><span>Shipping</span><b>{{ "%.2f"|format(estimate.shipping) }}</b></div>
+            <div class="breakdown"><span>Estimated tax</span><b>{{ "%.2f"|format(estimate.tax) }}</b></div>
+            <div class="breakdown"><span>Payment fee</span><b>{{ "%.2f"|format(estimate.payment_fee) }}</b></div>
+            <div class="breakdown total-line"><span>Estimated total</span><b>{{ "%.2f"|format(estimate.total) }}</b></div>
+            <div class="budget-status {{ 'over-budget' if estimate.over_budget else 'within-budget' }}">
+              {% if estimate.over_budget %}Over budget by {{ "%.2f"|format(estimate.difference) }}{% else %}Within budget · {{ "%.2f"|format(estimate.difference) }} remaining{% endif %}
+            </div>
+          </div>
+          {% else %}
+          <div class="result-hint"><span>✦</span> Your itemized estimate will appear here.</div>
+          {% endif %}
+        </article>
+      </section>
+      <p class="rate-disclaimer">Exchange rates are indicative and may differ from the rate offered by your bank or provider.</p>
+    </main>
+    <footer><a class="brand footer-brand" href="#home"><span class="brand-mark">↗</span><span>value<span class="brand-accent">flip</span></span></a><span>Make every move count.</span></footer>
+  </div>
+  <script>
+    document.querySelector(".swap-button").addEventListener("click", () => {
+      const from = document.querySelector("#from_currency");
+      const to = document.querySelector("#to_currency");
+      [from.value, to.value] = [to.value, from.value];
+    });
+    document.querySelector(".converter-form").addEventListener("submit", (event) => {
+      event.currentTarget.querySelector("#conversion-entry-id").value = crypto.randomUUID();
+    });
+
+    const historyKey = "valueflip-conversion-history";
+    const clearedEntryKey = "valueflip-cleared-conversion-id";
+    const historyList = document.querySelector("#history-list");
+    const historyEmpty = document.querySelector("#history-empty");
+    const historyMessage = document.querySelector("#history-message");
+    const clearHistory = document.querySelector("#clear-history");
+    const supportedCurrencies = new Set({{ currencies|tojson }});
+
+    function readHistory() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(historyKey) || "[]");
+        if (!Array.isArray(saved)) return [];
+        return saved.filter((entry) =>
+          entry &&
+          typeof entry.id === "string" &&
+          Number.isFinite(entry.amount) &&
+          Number.isFinite(entry.result) &&
+          supportedCurrencies.has(entry.from) &&
+          supportedCurrencies.has(entry.to) &&
+          typeof entry.date === "string"
+        ).slice(0, 10);
+      } catch {
+        return [];
+      }
+    }
+
+    function renderHistory(entries) {
+      historyList.replaceChildren();
+      historyEmpty.hidden = entries.length > 0;
+      clearHistory.hidden = entries.length === 0;
+      for (const entry of entries) {
+        const item = document.createElement("li");
+        item.className = "history-item";
+        const details = document.createElement("div");
+        details.className = "history-details";
+        const conversion = document.createElement("strong");
+        conversion.textContent = `${entry.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${entry.from} → ${entry.result.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${entry.to}`;
+        const date = document.createElement("span");
+        date.textContent = new Date(entry.date).toLocaleString();
+        details.append(conversion, date);
+        const arrow = document.createElement("span");
+        arrow.className = "history-arrow";
+        arrow.textContent = "↗";
+        item.append(details, arrow);
+        historyList.append(item);
+      }
+    }
+
+    let history = readHistory();
+    const currentConversion = document.querySelector(".conversion-result[data-entry-id]");
+    let clearedEntryId = "";
+    try {
+      clearedEntryId = localStorage.getItem(clearedEntryKey) || "";
+    } catch {
+      historyMessage.textContent = "History is unavailable in this browser.";
+    }
+    if (
+      currentConversion &&
+      currentConversion.dataset.entryId !== clearedEntryId &&
+      !history.some((entry) => entry.id === currentConversion.dataset.entryId)
+    ) {
+      history.unshift({
+        id: currentConversion.dataset.entryId,
+        amount: Number(currentConversion.dataset.amount),
+        from: currentConversion.dataset.fromCurrency,
+        to: currentConversion.dataset.toCurrency,
+        result: Number(currentConversion.dataset.result),
+        date: new Date().toISOString()
+      });
+      history = history.slice(0, 10);
+      try {
+        localStorage.setItem(historyKey, JSON.stringify(history));
+      } catch {
+        historyMessage.textContent = "History could not be saved in this browser.";
+      }
+    }
+    renderHistory(history);
+
+    clearHistory.addEventListener("click", () => {
+      history = [];
+      try {
+        localStorage.removeItem(historyKey);
+        if (currentConversion) {
+          localStorage.setItem(clearedEntryKey, currentConversion.dataset.entryId);
+        }
+        historyMessage.textContent = "Conversion history cleared.";
+      } catch {
+        historyMessage.textContent = "History could not be cleared in this browser.";
+      }
+      renderHistory(history);
+    });
+  </script>
+</body>
+</html>
